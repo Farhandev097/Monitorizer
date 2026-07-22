@@ -3,7 +3,7 @@ import axios from "axios"
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Plus, ExternalLink, Clock3, RefreshCw, Globe, Activity, Zap, TrendingUp, X, Link2, BarChart2 } from "lucide-react"
+import { Plus, ExternalLink, Clock3, RefreshCw, Globe, Activity, Zap, TrendingUp, X, Link2, BarChart2, Trash2 } from "lucide-react"
 
 // ---------------------------------------------------------------------------
 // /dashboard — v3
@@ -92,7 +92,7 @@ function UptimeRing({ ticks }: { ticks: Tick[] }) {
   )
 }
 
-function WebsiteCard({ site, now }: { site: Website; now: number }) {
+function WebsiteCard({ site, now, onDeleteClick }: { site: Website; now: number; onDeleteClick: (site: Website) => void }) {
   const latest = site.ticks?.[0]
   const status = getDisplayStatus(latest, now)
   const badgeCls = status === "Up" ? "md-up" : status === "Down" ? "md-down" : "md-unknown"
@@ -104,9 +104,19 @@ function WebsiteCard({ site, now }: { site: Website; now: number }) {
           <Globe size={15} className="md-url-icon" />
           <span className="md-url">{site.url.replace(/^https?:\/\//, "")}</span>
         </div>
-        <a href={site.url} target="_blank" rel="noreferrer" className="md-external">
-          <ExternalLink size={13} />
-        </a>
+        <div className="md-card-top-actions">
+          <a href={site.url} target="_blank" rel="noreferrer" className="md-external">
+            <ExternalLink size={13} />
+          </a>
+          <button
+            type="button"
+            className="md-delete-icon"
+            onClick={() => onDeleteClick(site)}
+            aria-label="Remove site"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
 
       <div className="md-card-mid">
@@ -130,6 +140,48 @@ function WebsiteCard({ site, now }: { site: Website; now: number }) {
       <Link href={`/website-status/${site.id}`} className="md-details-btn">
         <BarChart2 size={13} /> View last 30 min
       </Link>
+    </div>
+  )
+}
+function DeleteConfirmModal({ site, onClose, onConfirm, deleting }: {
+  site: Website
+  onClose: () => void
+  onConfirm: () => void
+  deleting: boolean
+}) {
+  return (
+    <div className="md-modal-backdrop" onClick={onClose}>
+      <div className="md-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="md-modal-head">
+          <h3>Remove this site?</h3>
+          <button className="md-modal-close" onClick={onClose} type="button" aria-label="Close">
+            <X size={16} />
+          </button>
+        </div>
+        <p className="md-modal-sub">
+          You'll stop monitoring <strong style={{ color: "var(--md-ink)" }}>{site.url.replace(/^https?:\/\//, "")}</strong>.
+          This can't be undone.
+        </p>
+
+        <div className="md-modal-form">
+          <button
+            type="button"
+            className="md-modal-submit md-modal-danger"
+            onClick={onConfirm}
+            disabled={deleting}
+          >
+            {deleting ? "Removing…" : "Remove site"}
+          </button>
+          <button
+            type="button"
+            className="md-modal-cancel"
+            onClick={onClose}
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -215,6 +267,26 @@ export default function Dashboard() {
   const [name, setName] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const now = useNow()
+  const [deleteTarget, setDeleteTarget] = useState<Website | null>(null)
+const [deleting, setDeleting] = useState(false)
+
+const handleDelete = useCallback(() => {
+  if (!deleteTarget) return
+  const token = localStorage.getItem("token")
+  setDeleting(true)
+  axios
+    .delete(`http://localhost:3003/v1/delete/${deleteTarget.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then(() => {
+      setWebsites((prev) => prev.filter((w) => w.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    })
+    .catch((err) => {
+      setError(err.response?.data?.message ?? "Couldn't remove that site — try again.")
+    })
+    .finally(() => setDeleting(false))
+}, [deleteTarget])
 
   const handleAdded = useCallback((newSite: Website) => {
     setWebsites((prev) => [{ ...newSite, ticks: [] }, ...prev])
@@ -305,11 +377,15 @@ export default function Dashboard() {
 
         .md-card { background: var(--md-bg-raised); border: 1px solid var(--md-line); border-radius: 10px; padding: 18px; }
         .md-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .md-url-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-        .md-url-icon { color: var(--md-ink-dim); flex-shrink: 0; }
-        .md-url { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .md-external { color: var(--md-ink-dim); display: flex; flex-shrink: 0; }
+        .md-card-top-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .md-external { color: var(--md-ink-dim); display: flex; }
         .md-external:hover { color: var(--md-green); }
+        .md-delete-icon { background: none; border: none; color: var(--md-ink-dim); display: flex; cursor: pointer; padding: 0; }
+        .md-delete-icon:hover { color: var(--md-red); }
+        .md-modal-danger { background: var(--md-red); }
+        .md-modal-danger:hover { background: #ff7a7a; }
+        .md-modal-cancel { background: none; border: 1px solid var(--md-line); color: var(--md-ink-dim); border-radius: 8px; padding: 11px; font-weight: 600; font-size: 13.5px; cursor: pointer; font-family: var(--md-sans); }
+        .md-modal-cancel:hover { border-color: var(--md-ink-dim); color: var(--md-ink); }
 
         .md-card-mid { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
         .md-ring-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
@@ -418,7 +494,8 @@ export default function Dashboard() {
         ) : (
           <div className="md-grid">
             {websites.map((site) => (
-              <WebsiteCard key={site.id} site={site} now={now} />
+                <WebsiteCard key={site.id} site={site} now={now} onDeleteClick={setDeleteTarget} />
+
             ))}
           </div>
         )}
@@ -426,6 +503,16 @@ export default function Dashboard() {
 
       {showAddModal && (
         <AddWebsiteModal onClose={() => setShowAddModal(false)} onAdded={handleAdded} />
+        
+      )}
+   
+      {deleteTarget && (
+        <DeleteConfirmModal
+          site={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+          deleting={deleting}
+        />
       )}
     </div>
   )

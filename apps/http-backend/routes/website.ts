@@ -100,3 +100,34 @@ websiteRouter.get('/v1/status/:websiteId', authMiddleware, async (req: Request<W
     }
 })
 
+websiteRouter.delete('/v1/delete/:websiteId', authMiddleware, async (req : Request<WebsiteId>, res : Response<{}>) =>{
+    const userId = req.userId
+    const websiteId = req.params.websiteId
+    
+
+    try {
+        const response = await prisma.website.delete({
+            where : {
+                id : websiteId,
+                user_id : userId
+            }
+        })
+
+        
+
+        if(!response) {
+            res.status(401).json({
+                message : "Invalid user",                
+            })
+        } else {
+            res.status(204).json({
+                message : "Successfully Deleted"
+            })
+        }
+        } catch (error) {
+            res.status(501).json({
+                error
+            })
+        
+    }
+})
