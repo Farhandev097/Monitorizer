@@ -9,15 +9,9 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
-// app.get('/', async (req, res) => {
-//     const data = await prisma.user.create({
-//         data : {
-//             name : "farhan",
-//             email : "farhan2005etw@gmail.com"
-//         }
-//     })
-//     res.send(data)
-// }) 
+ app.get('/', (req, res) => {
+     res.send("Welcome to Backend")
+ }) 
 
 app.use(userRouter)
 app.use(websiteRouter)
