@@ -1,6 +1,10 @@
 import { xAckBulk, xReadGroup } from "@repo/redis/client"
 import axios from 'axios'
 import { prisma } from "@repo/db"
+import express from 'express'
+
+const app = express()
+
 
 
 const REGION_ID = "5704ea46-fc48-4203-b0b4-e22bf447963a"
@@ -66,5 +70,9 @@ async function fetchWebsite(url : string, websiteId : string) {
     })
   })  
 }
+
+app.get('/', (req, res) => {\
+     res.send("Welcome to Worker")
+})
 
 main()
