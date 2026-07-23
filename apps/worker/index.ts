@@ -75,4 +75,6 @@ app.get('/', (req, res) => {
      res.send("Welcome to Worker")
 })
 
+app.listen(3002)
+
 main()
