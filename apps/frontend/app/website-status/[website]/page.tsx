@@ -67,7 +67,7 @@ export default function WebsiteStatusPage() {
       return
     }
     axios
-      .get(`http://localhost:3003/v1/status/${websiteId}`, {
+      .get(`https://monitorizer.onrender.com/v1/status/${websiteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
