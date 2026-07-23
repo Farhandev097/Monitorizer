@@ -5,16 +5,6 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Plus, ExternalLink, Clock3, RefreshCw, Globe, Activity, Zap, TrendingUp, X, Link2, BarChart2, Trash2 } from "lucide-react"
 
-// ---------------------------------------------------------------------------
-// /dashboard — v3
-// Adds staleness handling: if the latest tick for a site is older than the
-// 3-min check cadence (+ a small buffer for jitter), the displayed status
-// falls back to "Unknown" rather than showing a stuck/stale Up or Down.
-// The moment a fresh tick arrives, it flips back to the real status.
-// `now` is tracked once at the Dashboard level and passed down, so there's
-// a single ticking clock rather than one per card.
-// ---------------------------------------------------------------------------
-
 interface Tick {
   id: string
   response_time_ms: number
@@ -37,7 +27,8 @@ interface AddWebsiteModalProps {
   onAdded: (website: Website) => void
 }
 
-const STALE_MS = 3 * 60 * 1000 + 15_000 // 3 min cadence + buffer for jitter/network delay
+const POLL_MS = 30 * 1000 // poll every 30s instead of every 3min
+const STALE_MS = 3 * 60 * 1000 + 90_000 // 3min check cadence + 90s slack for drift/jitter
 
 function getDisplayStatus(latest: Tick | undefined, now: number): "Up" | "Down" | "Unknown" {
   if (!latest) return "Unknown"
@@ -143,6 +134,7 @@ function WebsiteCard({ site, now, onDeleteClick }: { site: Website; now: number;
     </div>
   )
 }
+
 function DeleteConfirmModal({ site, onClose, onConfirm, deleting }: {
   site: Website
   onClose: () => void
@@ -263,44 +255,54 @@ export default function Dashboard() {
   const router = useRouter()
   const [websites, setWebsites] = useState<Website[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const now = useNow()
   const [deleteTarget, setDeleteTarget] = useState<Website | null>(null)
-const [deleting, setDeleting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
-const handleDelete = useCallback(() => {
-  if (!deleteTarget) return
-  const token = localStorage.getItem("token")
-  setDeleting(true)
-  axios
-    .delete(`https://monitorizer.onrender.com/v1/delete/${deleteTarget.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then(() => {
-      setWebsites((prev) => prev.filter((w) => w.id !== deleteTarget.id))
-      setDeleteTarget(null)
-    })
-    .catch((err) => {
-      setError(err.response?.data?.message ?? "Couldn't remove that site — try again.")
-    })
-    .finally(() => setDeleting(false))
-}, [deleteTarget])
+  const handleDelete = useCallback(() => {
+    if (!deleteTarget) return
+    const token = localStorage.getItem("token")
+    setDeleting(true)
+    axios
+      .delete(`https://monitorizer.onrender.com/v1/delete/${deleteTarget.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(() => {
+        setWebsites((prev) => prev.filter((w) => w.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message ?? "Couldn't remove that site — try again.")
+      })
+      .finally(() => setDeleting(false))
+  }, [deleteTarget])
 
   const handleAdded = useCallback((newSite: Website) => {
     setWebsites((prev) => [{ ...newSite, ticks: [] }, ...prev])
   }, [])
 
-  const fetchWebsites = useCallback(() => {
+  // isBackground=true skips the full-page loading state so periodic polls
+  // don't flash/reset the whole dashboard every 30s — only the first mount
+  // shows the loading spinner.
+  const fetchWebsites = useCallback((isBackground = false) => {
     const token = localStorage.getItem("token")
     if (!token) {
       router.push("/")
       return
     }
+    if (isBackground) setRefreshing(true)
     axios
       .get("https://monitorizer.onrender.com/v1/get-user", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        params: { _t: Date.now() }, // cache-busting query param
       })
       .then((res) => {
         setName(res.data.userWithWebsites.name)
@@ -311,12 +313,15 @@ const handleDelete = useCallback(() => {
         console.error("Failed to fetch websites:", err)
         setError("Couldn't load your sites — check the API is running.")
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setRefreshing(false)
+      })
   }, [router])
 
   useEffect(() => {
-    fetchWebsites()
-    const id = setInterval(fetchWebsites, 3 * 60 * 1000) // matches the 3-min check cadence
+    fetchWebsites(false)
+    const id = setInterval(() => fetchWebsites(true), POLL_MS)
     return () => clearInterval(id)
   }, [fetchWebsites])
 
@@ -362,7 +367,13 @@ const handleDelete = useCallback(() => {
         .md-hello { font-size: 13.5px; color: var(--md-ink-dim); }
 
         .md-head { padding: 36px 0 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .md-head-left { display: flex; flex-direction: column; gap: 6px; }
         .md-title { font-family: var(--md-mono); font-size: 25px; font-weight: 700; margin: 0; }
+        .md-refresh-status { display: flex; align-items: center; gap: 6px; font-family: var(--md-mono); font-size: 11px; color: var(--md-ink-dim); }
+        .md-head-actions { display: flex; align-items: center; gap: 10px; }
+        .md-refresh-btn { font-family: var(--md-mono); background: none; color: var(--md-ink-dim); border: 1px solid var(--md-line); padding: 10px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .md-refresh-btn:hover:not(:disabled) { border-color: var(--md-green-dim); color: var(--md-green); }
+        .md-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .md-add { font-family: var(--md-mono); background: var(--md-green); color: #06120d; border: none; padding: 10px 16px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         .md-add:hover { background: #4de8a4; }
 
@@ -451,10 +462,26 @@ const handleDelete = useCallback(() => {
 
       <div className="md-wrap">
         <div className="md-head">
-          <h1 className="md-title">Your sites</h1>
-          <button className="md-add" type="button" onClick={() => setShowAddModal(true)}>
-            <Plus size={15} /> Add site
-          </button>
+          <div className="md-head-left">
+            <h1 className="md-title">Your sites</h1>
+            <span className="md-refresh-status">
+              {refreshing ? "refreshing…" : `auto-refreshes every ${POLL_MS / 1000}s`}
+            </span>
+          </div>
+          <div className="md-head-actions">
+            <button
+              className="md-refresh-btn"
+              type="button"
+              onClick={() => fetchWebsites(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw size={13} className={refreshing ? "md-spin" : ""} />
+              Refresh now
+            </button>
+            <button className="md-add" type="button" onClick={() => setShowAddModal(true)}>
+              <Plus size={15} /> Add site
+            </button>
+          </div>
         </div>
 
         {error && <div className="md-error">{error}</div>}
@@ -494,8 +521,7 @@ const handleDelete = useCallback(() => {
         ) : (
           <div className="md-grid">
             {websites.map((site) => (
-                <WebsiteCard key={site.id} site={site} now={now} onDeleteClick={setDeleteTarget} />
-
+              <WebsiteCard key={site.id} site={site} now={now} onDeleteClick={setDeleteTarget} />
             ))}
           </div>
         )}
@@ -503,9 +529,8 @@ const handleDelete = useCallback(() => {
 
       {showAddModal && (
         <AddWebsiteModal onClose={() => setShowAddModal(false)} onAdded={handleAdded} />
-        
       )}
-   
+
       {deleteTarget && (
         <DeleteConfirmModal
           site={deleteTarget}
