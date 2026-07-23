@@ -210,7 +210,7 @@ function AddWebsiteModal({ onClose, onAdded }: AddWebsiteModalProps) {
     setSubmitting(true)
     axios
       .post(
-        "http://localhost:3003/v1/add-website",
+        "https://monitorizer.onrender.com/v1/add-website",
         { url },
         { headers: { Authorization: `Bearer ${token}` } }
       )
@@ -275,7 +275,7 @@ const handleDelete = useCallback(() => {
   const token = localStorage.getItem("token")
   setDeleting(true)
   axios
-    .delete(`http://localhost:3003/v1/delete/${deleteTarget.id}`, {
+    .delete(`https://monitorizer.onrender.com/v1/delete/${deleteTarget.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
     .then(() => {
@@ -299,7 +299,7 @@ const handleDelete = useCallback(() => {
       return
     }
     axios
-      .get("http://localhost:3003/v1/get-user", {
+      .get("https://monitorizer.onrender.com/v1/get-user", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
