@@ -98,7 +98,7 @@ export default function AuthPage() {
         ? { name: form.get("name"), email: form.get("email"), password: form.get("password") }
         : { email: form.get("email"), password: form.get("password") };
         if(mode === 'signup') {
-          const res : any = await axios.post('https://monitorizer.onrender.com', {
+          const res : any = await axios.post('https://monitorizer.onrender.com/v1/signup', {
             email : payload.email,
             name : payload.name,
             password : payload.password
@@ -109,7 +109,7 @@ export default function AuthPage() {
             setMode("signin")                  
           }
         } else {
-          const res : any = await axios.post('https://monitorizer.onrender.com', {
+          const res : any = await axios.post('https://monitorizer.onrender.com/v1/signin', {
             email : payload.email,
             password : payload.password            
           })
