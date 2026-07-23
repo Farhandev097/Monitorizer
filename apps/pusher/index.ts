@@ -1,5 +1,6 @@
 import { prisma } from '@repo/db'
 import {xAddBulk} from '@repo/redis/client'
+import express from 'express'
 
 async function main () {
     let websites = await prisma.website.findMany({
@@ -20,6 +21,14 @@ async function main () {
 setInterval(() => {
     main()
 }, 3 * 1000 * 60)
+
+const app = express()
+
+app.get('/', (req, res) => {
+    res.send("Welocome to Pusher")    
+})
+
+app.listen(3001)
 
 main()
 
