@@ -7,14 +7,15 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "dev": "bun run index.ts"
+  "dev": "bun --watch index.ts",
+  "start": "bun run index.ts"
   },
   "peerDependencies": {
-    "typescript": "^5",
-    "@repo/db": "workspace:*",
-    "@repo/redis" : "workspace:*"
+    "typescript": "^5"   
   },
   "dependencies" : {
+     "@repo/db": "workspace:*",
+     "@repo/redis" : "workspace:*",
      "@types/express": "^5.0.6",
      "express" : "5.2.1"    
   }

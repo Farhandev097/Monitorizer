@@ -28,6 +28,15 @@ app.get('/', (req, res) => {
     res.send("Welocome to Pusher")    
 })
 
+app.get("/health", (_, res) => {
+    res.json({
+        status: "ok"
+    });
+});
+
+
+
+
 app.listen(3001)
 
 main()

@@ -75,6 +75,12 @@ app.get('/', (req, res) => {
      res.send("Welcome to Worker")
 })
 
+app.get("/health", (_, res) => {
+    res.json({
+        status: "ok"
+    });
+});
+
 app.listen(3002)
 
 main()
