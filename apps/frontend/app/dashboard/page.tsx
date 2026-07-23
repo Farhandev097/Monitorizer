@@ -27,8 +27,8 @@ interface AddWebsiteModalProps {
   onAdded: (website: Website) => void
 }
 
-const POLL_MS = 30 * 1000 // poll every 30s instead of every 3min
-const STALE_MS = 3 * 60 * 1000 + 90_000 // 3min check cadence + 90s slack for drift/jitter
+const POLL_MS = 30 * 1000 
+const STALE_MS = 3 * 60 * 1000 + 90_000 
 
 function getDisplayStatus(latest: Tick | undefined, now: number): "Up" | "Down" | "Unknown" {
   if (!latest) return "Unknown"
