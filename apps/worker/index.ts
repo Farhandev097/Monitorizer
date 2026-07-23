@@ -71,7 +71,7 @@ async function fetchWebsite(url : string, websiteId : string) {
   })  
 }
 
-app.get('/', (req, res) => {\
+app.get('/', (req, res) => {
      res.send("Welcome to Worker")
 })
 
