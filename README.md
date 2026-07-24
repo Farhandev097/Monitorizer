@@ -29,11 +29,13 @@ Monitorizer is a [Turborepo](https://turborepo.dev) monorepo:
 
 | Layer | Tech |
 |---|---|
-| Frontend | Next.js (React), deployed on [Vercel](https://vercel.com) |
+| Frontend | Next.js (React), deployed on [Vercel](https://vercel.com](https://monitorizer-frontend-rho.vercel.app/)) |
 | Backend API | Express, deployed on [Render](https://render.com) |
+| Pusher API | Express, Redis, deployed on [Render](https://render.com) |
+| Worker API | Express, Redis, deployed on [Render](https://render.com) |
 | Database | [Prisma Postgres](https://www.prisma.io/postgres) via Prisma 7 |
 | ORM | Prisma 7 with `@prisma/adapter-pg` |
-| Package manager | Bun / pnpm |
+| Package manager | Bun |
 | Monorepo tooling | Turborepo |
 | Auth | JWT bearer tokens |
 
@@ -44,8 +46,11 @@ monitorizer/
 ├─ apps/
 │  ├─ web/            # Next.js dashboard (frontend)
 │  └─ http-backend/    # Express API
+│  └─ pusher/          # Redis API
+│  └─ worker/          # Redis API
 ├─ packages/
 │  ├─ db/              # Prisma schema, client, and DB access layer (@repo/db)
+│  └─ Redis/           # Exports API for aps
 │  ├─ eslint-config/
 │  └─ typescript-config/
 └─ turbo.json
@@ -68,7 +73,7 @@ cd Monitorizer
 bun install
 ```
 
-### 2. Configure the database
+### 2. Configure the database & Redis
 
 Inside `packages/db`, create a `.env` file:
 
@@ -81,6 +86,11 @@ Then push the schema:
 ```bash
 cd packages/db
 bun run db:push
+```
+Inside `packages/redis`, create a `.env` file:
+
+```env
+REDIS_URL="your-redis-connection-string"
 ```
 
 ### 3. Run everything
