@@ -1,159 +1,134 @@
-# Turborepo starter
+<div align="center">
 
-This Turborepo starter is maintained by the Turborepo core team.
+# 🟢 Monitorizer
 
-## Using this example
+**Real-time website uptime monitoring — know the moment something goes down.**
 
-Run the following command:
+Monitorizer checks your sites every 3 minutes and gives you a live dashboard of uptime, response times, and status history — no config files, no YAML, just paste a URL and go.
 
-```sh
-npx create-turbo@latest
+[Live App](https://monitorizer-frontend.vercel.app) · [Report a bug](../../issues) · [Request a feature](../../issues)
+
+</div>
+
+---
+
+## ✨ What it does
+
+- **Add any URL** and Monitorizer starts checking it automatically within 3 minutes
+- **Live status badges** — Up / Down / Unknown, updated in near real time on the dashboard
+- **Response time tracking** for every check, with a rolling uptime ring per site
+- **Overview stats** — total sites monitored, how many are up/down right now, average response time across your whole fleet
+- **One-click removal** with a confirmation step, so you don't nuke a site by accident
+- **Auto-refreshing dashboard** — polls in the background and flips stale data to "Unknown" if a check hasn't landed recently, so you're never staring at a false Up
+
+---
+
+## 🧱 Tech stack
+
+Monitorizer is a [Turborepo](https://turborepo.dev) monorepo:
+
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js (React), deployed on [Vercel](https://vercel.com) |
+| Backend API | Express, deployed on [Render](https://render.com) |
+| Database | [Prisma Postgres](https://www.prisma.io/postgres) via Prisma 7 |
+| ORM | Prisma 7 with `@prisma/adapter-pg` |
+| Package manager | Bun / pnpm |
+| Monorepo tooling | Turborepo |
+| Auth | JWT bearer tokens |
+
+### Monorepo layout
+
+```
+monitorizer/
+├─ apps/
+│  ├─ web/            # Next.js dashboard (frontend)
+│  └─ http-backend/    # Express API
+├─ packages/
+│  ├─ db/              # Prisma schema, client, and DB access layer (@repo/db)
+│  ├─ eslint-config/
+│  └─ typescript-config/
+└─ turbo.json
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## 🚀 Getting started
 
-### Apps and Packages
+### Prerequisites
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+- [Bun](https://bun.sh) or pnpm
+- A [Prisma Postgres](https://www.prisma.io/postgres) database (or any Postgres instance)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+### 1. Clone and install
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+git clone https://github.com/Farhandev097/Monitorizer.git
+cd Monitorizer
+bun install
 ```
 
-Without global `turbo`, use your package manager:
+### 2. Configure the database
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Inside `packages/db`, create a `.env` file:
+
+```env
+DATABASE_URL="your-postgres-connection-string"
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Then push the schema:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+cd packages/db
+bun run db:push
 ```
 
-Without global `turbo`:
+### 3. Run everything
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+From the repo root:
+
+```bash
+bun run dev
 ```
 
-### Develop
+This starts the Next.js dashboard and the Express API together via Turborepo.
 
-To develop all apps and packages, run the following command:
+### Useful commands
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+| Command | What it does |
+|---|---|
+| `bun run dev` | Run all apps in dev mode |
+| `bun run --filter=web dev` | Run just the frontend |
+| `bun run --filter=http-backend dev` | Run just the API |
+| `bun run db:push` (in `packages/db`) | Push schema changes without a migration |
+| `bun run migrate:dev` (in `packages/db`) | Create and apply a migration |
 
-```sh
-cd my-turborepo
-turbo dev
-```
+---
 
-Without global `turbo`, use your package manager:
+## 📊 How the monitoring works
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+1. Sites you add are checked on a **3-minute cadence**
+2. Each check writes a **tick** — status (`Up` / `Down`), response time, and timestamp
+3. The dashboard polls the API in the background and computes each site's current status from its latest tick
+4. If a tick is older than the expected check window (plus a small buffer for network jitter), the dashboard shows `Unknown` instead of a stale status — so you never get a false sense of security from an old data point
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## 🗺️ Roadmap
 
-```sh
-turbo dev --filter=web
-```
+- [ ] Email / webhook alerts on status change
+- [ ] Multi-region checks
+- [ ] Historical uptime graphs beyond the last 30 minutes
+- [ ] Public status pages
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+## 🤝 Contributing
 
-### Remote Caching
+Issues and PRs are welcome — this project is a work in progress and still evolving.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+---
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## 📄 License
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+MIT
